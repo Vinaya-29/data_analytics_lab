@@ -1,0 +1,47 @@
+!pip install torch torchvision matplotlib pillow
+import torch
+import torch.nn as nn
+from torchvision import datasets, transforms, models
+from torch.utils.data import DataLoader
+from PIL import Image
+import matplotlib.pyplot as plt
+import requests
+from google.colab import files
+
+categories = ['Sports', 'News', 'Sci/Tech', 'Entertainment']
+
+transform = transforms.Compose([
+    transforms.Resize((224,224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
+model = models.resnet50(pretrained=True)
+model.eval()
+
+def classify_image(image_path):
+    img = Image.open(image_path).convert('RGB')
+    plt.imshow(img)
+    plt.axis('off')
+    plt.show()
+
+    img_tensor = transform(img).unsqueeze(0)
+    with torch.no_grad():
+        outputs = model(img_tensor)
+        _, predicted_idx = torch.max(outputs, 1)
+
+    # Fetch the ImageNet labels
+    labels_url = "https://raw.githubusercontent.com/GraceNeethuP/nl/refs/heads/main/nlp.json"
+    labels = requests.get(labels_url).json()
+    predicted_label = labels[predicted_idx.item()]
+
+    # Map the predicted index to one of the predefined categories
+    mapped_category = categories[predicted_idx.item() % 4]
+
+    print(f"Predicted Label: {predicted_label}")
+    print(f"Mapped Category: {mapped_category}")
+
+uploaded = files.upload()
+image_path = list(uploaded.keys())[0]
+classify_image(image_path)
+torch.save(model.state_dict(), "image_classification_model.pt")
